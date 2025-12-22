@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>網頁番茄鐘計時器</title>
+  <style>
+    :root{
+      --bg-light: #FFF9DB; /* 淺黃色背景 */
+      --bg-deep-coffee: #4E342E; /* 深咖啡 */
+      --tomato-color: #FF4500; /* 橘紅色 (番茄) */
+      --tomato-dark: #E63C00;
+      --display-bg: rgba(255,255,255,0.12);
+      --control-bg: rgba(255,255,255,0.9);
+      --control-text: #222;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      padding:0;
+      background: var(--bg-light); /* 預設淺黃色 */
+      font-family: "Noto Sans TC", "Segoe UI", Roboto, Arial, sans-serif;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    /* 容器 */
+    .container{
+      width:520px;
+      max-width:95vw;
+      text-align:center;
+    }
+
+    /* 番茄鐘本體 500x500 */
+    .tomato{
+      width:500px;
+      height:500px;
+      margin:0 auto 18px;
+      position:relative;
+      border-radius:50%;
+      background: radial-gradient(circle at 30% 20%, #FF7A3A 0%, var(--tomato-color) 40%, var(--tomato-dark) 100%);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25), inset 0 -18px 40px rgba(0,0,0,0.12);
+      overflow:visible;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    /* 番茄柄 */
+    .stem{
+      position:absolute;
+      top:-34px;
+      left:50%;
+      transform:translateX(-50%);
+      width:120px;
+      height:70px;
+      border-radius:20px;
+      background: linear-gradient(180deg, #2E7D32, #1B5E20);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.25);
+    }
+    .stem::before{
+      /* 小葉子 */
+      content:"";
+      position:absolute;
+      width:40px;
+      height:24px;
+      border-radius: 16px;
+      left:6px;
+      top:-18px;
+      transform:rotate(-22deg);
+      background: linear-gradient(180deg,#66BB6A,#2E7D32);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.18);
+    }
+    .stem::after{
+      content:"";
+      position:absolute;
+      width:40px;
+      height:24px;
+      border-radius: 16px;
+      right:6px;
+      top:-18px;
+      transform:rotate(18deg);
+      background: linear-gradient(180deg,#66BB6A,#2E7D32);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.18);
+    }
+
+    /* 顯示區塊（顯示時間）*/
+    .display{
+      width:320px;
+      height:160px;
+      border-radius:18px;
+      background: var(--display-bg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 8px 18px rgba(0,0,0,0.18);
+      color: #fff;
+      font-weight:500;
+      font-size:64px;
+      letter-spacing:4px;
+      user-select:none;
+    }
+
+    /* 最後3分鐘樣式：閃爍且加粗 */
+    @keyframes blink {
+      0%{ opacity:1; }
+      50%{ opacity:0.12; }
+      100%{ opacity:1; }
+    }
+    .urgent{
+      animation: blink 1s linear infinite;
+      font-weight:800;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    /* 控制列 */
+    .controls{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      align-items:center;
+    }
+    button, .btn{
+      padding:10px 16px;
+      border-radius:8px;
+      border: none;
+      cursor:pointer;
+      font-size:16px;
+      color:var(--control-text);
+      background: var(--control-bg);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+    }
+    button:active{ transform:translateY(1px); }
+    .btn-primary{
+      background: linear-gradient(180deg,#ffb37a,#ff8a3d);
+      color: #2b1b10;
+      font-weight:700;
+      border:1px solid rgba(0,0,0,0.06);
+    }
+
+    /* 設定面板 (模態) */
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.28);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index:50;
+    }
+    .modal{
+      background: #fff;
+      padding:18px;
+      border-radius:12px;
+      width:320px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      color:#222;
+    }
+    .modal h3{
+      margin:0 0 8px 0;
+      font-size:18px;
+    }
+    .inputs{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      justify-content:center;
+      margin:10px 0 14px;
+    }
+    .inputs input{
+      width:92px;
+      padding:8px 10px;
+      font-size:18px;
+      border-radius:8px;
+      border:1px solid #ddd;
+      text-align:center;
+    }
+    .modal .hint{
+      font-size:12px;
+      color:#666;
+      margin-bottom:10px;
+    }
+    .small{
+      font-size:13px;
+      padding:8px 10px;
+      border-radius:8px;
+    }
+
+    /* footer 說明 */
+    .note{
+      margin-top:8px;
+      font-size:13px;
+      color:#3b3b3b;
+    }
+
+    /* 手機優化 */
+    @media (max-width:540px){
+      .tomato{ width:88vw; height:88vw; }
+      .display{ width:68%; height:20%; font-size:calc(18px + 6vw); }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container" role="main" aria-labelledby="title">
+    <h1 id="title" style="margin:0 0 12px;">番茄鐘計時器</h1>
+
+    <div class="tomato" id="tomato" aria-hidden="false">
+      <div class="stem" aria-hidden="true"></div>
+
+      <div class="display" id="timeDisplay" aria-live="polite" role="timer">
+        25:00
+      </div>
+
+      <!-- 左下標籤區: 設定 清除 -->
+      <div style="position:absolute; left:18px; bottom:18px; display:flex; gap:8px;">
+        <button id="btnSettings" class="btn" title="設定計時長度">⚙️ 設定</button>
+        <button id="btnClear" class="btn" title="清除剩餘時間">🧹 清除</button>
+      </div>
+
+      <!-- 右下: 開始按鈕 -->
+      <div style="position:absolute; right:18px; bottom:18px;">
+        <button id="btnStart" class="btn btn-primary" title="開始計時">開始</button>
+      </div>
+
+    </div>
+
+    <div class="controls" aria-hidden="true" style="opacity:0.9;">
+      <div style="font-size:13px; color:#333; padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.9);">
+        可設定最長 99 分 59 秒
+      </div>
+    </div>
+
+    <div class="note">
+      提示：按「設定」可調整分/秒，按「清除」會停止並清除剩餘時間，按「開始」啟動計時。
+    </div>
+  </div>
+
+  <!-- 設定模態 -->
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <h3>設定計時長度</h3>
+      <div class="hint">請輸入分鐘與秒數，最大 99 分 59 秒</div>
+      <div class="inputs">
+        <input type="number" id="inputMin" min="0" max="99" value="25" aria-label="分鐘" />
+        <input type="number" id="inputSec" min="0" max="59" value="0" aria-label="秒" />
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end;">
+        <button class="small" id="modalCancel">取消</button>
+        <button class="small btn-primary" id="modalSave">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM 元件
+    const body = document.body;
+    const display = document.getElementById('timeDisplay');
+    const btnStart = document.getElementById('btnStart');
+    const btnSettings = document.getElementById('btnSettings');
+    const btnClear = document.getElementById('btnClear');
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const inputMin = document.getElementById('inputMin');
+    const inputSec = document.getElementById('inputSec');
+    const modalSave = document.getElementById('modalSave');
+    const modalCancel = document.getElementById('modalCancel');
+
+    // 計時器狀態
+    let totalSecondsSetting = 25*60; // 初始 25 分
+    let remainingSeconds = totalSecondsSetting;
+    let timerInterval = null;
+    let endFlashInterval = null;
+    let isRunning = false;
+    let isEnded = false;
+
+    // 工具：格式化 mm:ss，最大 99:59
+    function formatTime(sec){
+      sec = Math.max(0, Math.floor(sec));
+      const minutes = Math.floor(sec / 60);
+      const seconds = sec % 60;
+      const mm = String(minutes).padStart(2,'0');
+      const ss = String(seconds).padStart(2,'0');
+      return mm + ':' + ss;
+    }
+
+    // 更新顯示（在倒數期間顯示剩餘時間）
+    function refreshDisplay(){
+      display.textContent = formatTime(remainingSeconds);
+      // 判定最後 3 分鐘 (<=180s 且 >0)
+      if (isRunning && remainingSeconds > 0 && remainingSeconds <= 180) {
+        display.classList.add('urgent');
+      } else {
+        display.classList.remove('urgent');
+      }
+    }
+
+    // 開始計時
+    function startTimer(){
+      if (isRunning) return;
+      if (remainingSeconds <= 0) {
+        // 如果剩餘時間為0，自設定值重新開始
+        remainingSeconds = totalSecondsSetting;
+      }
+      if (remainingSeconds <= 0) {
+        alert('請先設定大於 0 的時間。');
+        return;
+      }
+
+      // 進入倒數
+      isRunning = true;
+      isEnded = false;
+      btnStart.textContent = '進行中...';
+      btnStart.disabled = true;
+      btnSettings.disabled = true;
+
+      // 停止任何結束時背景閃爍
+      stopEndFlashing();
+
+      timerInterval = setInterval(() => {
+        remainingSeconds--;
+        refreshDisplay();
+
+        if (remainingSeconds <= 0){
+          // 到期
+          stopTimer(false);
+          handleTimerEnd();
+        }
+      }, 1000);
+
+      refreshDisplay();
+    }
+
+    // 停止計時 (clearOnly: 是否只是暫停/清除而非到期)
+    function stopTimer(clearOnly=true){
+      if (timerInterval){
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      isRunning = false;
+      btnStart.textContent = '開始';
+      btnStart.disabled = false;
+      btnSettings.disabled = false;
+      if (clearOnly) {
+        display.classList.remove('urgent');
+      }
+    }
+
+    // 到期處理：背景交替淺黃色 / 深咖啡
+    function handleTimerEnd(){
+      isEnded = true;
+      // 開始交替顯示背景色
+      let toggle = false;
+      endFlashInterval = setInterval(() => {
+        toggle = !toggle;
+        body.style.background = toggle ? 'var(--bg-deep-coffee)' : 'var(--bg-light)';
+      }, 600);
+
+      // 將顯示時間設為 00:00
+      remainingSeconds = 0;
+      refreshDisplay();
+
+      // 允許按清除以停止閃爍
+      btnStart.disabled = false;
+      btnSettings.disabled = false;
+      btnStart.textContent = '開始';
+      isRunning = false;
+    }
+
+    // 停止到期閃爍並回復淺黃色背景
+    function stopEndFlashing(){
+      if (endFlashInterval){
+        clearInterval(endFlashInterval);
+        endFlashInterval = null;
+      }
+      body.style.background = 'var(--bg-light)';
+    }
+
+    // 清除按鈕行為：停止計時並清除剩餘時間 (回到設定值)
+    function clearRemaining(){
+      // 停止定時器
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+      // 停掉結束閃爍
+      stopEndFlashing();
+
+      isRunning = false;
+      isEnded = false;
+
+      // 清除剩餘時間：回到設定值，但若設定值為0則顯示 00:00
+      remainingSeconds = totalSecondsSetting;
+      refreshDisplay();
+
+      btnStart.textContent = '開始';
+      btnStart.disabled = false;
+      btnSettings.disabled = false;
+    }
+
+    // Modal open/close
+    function openSettings(){
+      // 在開啟時顯示目前設定值
+      const mins = Math.floor(totalSecondsSetting / 60);
+      const secs = totalSecondsSetting % 60;
+      inputMin.value = String(mins);
+      inputSec.value = String(secs);
+      modalBackdrop.style.display = 'flex';
+      modalBackdrop.setAttribute('aria-hidden','false');
+    }
+    function closeSettings(){
+      modalBackdrop.style.display = 'none';
+      modalBackdrop.setAttribute('aria-hidden','true');
+    }
+
+    // 儲存設定
+    function saveSettings(){
+      let m = parseInt(inputMin.value || '0', 10);
+      let s = parseInt(inputSec.value || '0', 10);
+      if (isNaN(m)) m = 0;
+      if (isNaN(s)) s = 0;
+      // 強制範圍
+      if (m < 0) m = 0;
+      if (m > 99) m = 99;
+      if (s < 0) s = 0;
+      if (s > 59) s = 59;
+
+      totalSecondsSetting = m*60 + s;
+      // 當目前未在倒數時，顯示更新後的設定值
+      if (!isRunning && !isEnded) {
+        remainingSeconds = totalSecondsSetting;
+      }
+      refreshDisplay();
+      closeSettings();
+    }
+
+    // 綁定事件
+    btnStart.addEventListener('click', () => {
+      startTimer();
+    });
+    btnSettings.addEventListener('click', () => {
+      // 設定不可在倒數時更改（UI上會 disabled）
+      if (isRunning) return;
+      openSettings();
+    });
+    btnClear.addEventListener('click', () => {
+      clearRemaining();
+    });
+
+    modalCancel.addEventListener('click', () => closeSettings());
+    modalBackdrop.addEventListener('click', (e) => {
+      if (e.target === modalBackdrop) closeSettings();
+    });
+    modalSave.addEventListener('click', () => {
+      saveSettings();
+    });
+
+    // 鍵盤友善：Enter 儲存
+    inputSec.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveSettings();
+    });
+    inputMin.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') saveSettings();
+    });
+
+    // 初始化顯示
+    remainingSeconds = totalSecondsSetting;
+    refreshDisplay();
+
+    // 當視窗或頁面卸載時清理 intervals
+    window.addEventListener('beforeunload', () => {
+      if (timerInterval) clearInterval(timerInterval);
+      if (endFlashInterval) clearInterval(endFlashInterval);
+    });
+
+    // Accessibility: 按下空白鍵可以清除（示範）
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        // 若焦點在輸入框中不要攔截
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+        e.preventDefault();
+        // Space 觸發開始（方便行動裝置）：
+        if (!isRunning) startTimer();
+      }
+    });
+
+  </script>
+</body>
+</html>
