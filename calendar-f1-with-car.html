@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>F1 風行事曆（賽車背景）</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#070708;
+      --card:#0f1720;
+      --muted:#9aa4af;
+      --accent:#e10600;
+      --accent-2:#ff4d4d;
+      --track:#0b0b0b;
+      --today-outline: rgba(225,16,0,0.14);
+      --cell-size:72px;
+      --radius:6px;
+      --font-sans: "Roboto", system-ui, -apple-system, "Segoe UI", Arial;
+      --font-heading: "Oswald", "Roboto", system-ui;
+      /* 更換這裡的 URL 為你要的賽車背景圖（建議高畫質橫向圖） */
+      --car-image: url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=1920&auto=format&fit=crop&sat=-20');
+      --car-image-opacity: 0.14; /* 可調整背景圖明暗度 */
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:16px;
+      font-family:var(--font-sans);
+      background:
+        radial-gradient(1200px 300px at 10% 10%, rgba(225,16,0,0.03), transparent 10%),
+        linear-gradient(180deg, #060606 0%, #0b0b0d 100%);
+      color:#e6eef8;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1fr 320px;
+      gap:18px;
+      align-items:start;
+    }
+
+    /* card with background car (main calendar card uses the car bg) */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      border:1px solid rgba(255,255,255,0.03);
+      border-radius:10px;
+      padding:14px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      backdrop-filter: blur(4px);
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* background image layer added via ::before */
+    .card.calendar-with-car::before{
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(180deg, rgba(5,5,5,0.55), rgba(5,5,5,0.6)),
+        var(--car-image);
+      background-size: cover;
+      background-position: center right;
+      opacity: var(--car-image-opacity);
+      pointer-events: none;
+      z-index: 0;
+      filter: saturate(0.95) contrast(0.95);
+    }
+
+    /* subtle stripe overlay (race-checker) */
+    .card .stripe{
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(135deg, rgba(255,255,255,0.01) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.01) 50%, rgba(255,255,255,0.01) 75%, transparent 75%, transparent);
+      background-size:18px 18px;
+      pointer-events:none;
+      mix-blend-mode:overlay;
+      opacity:0.04;
+      border-radius:10px;
+      z-index:1;
+    }
+
+    /* ensure content sits above background layers */
+    .card-inner{ position:relative; z-index:2 }
+
+    header.calendar-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .logo{
+      width:44px;height:44px;
+      background: linear-gradient(135deg, #111 0%, #1a1a1a 50%);
+      border-radius:6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:var(--accent);
+      font-family:var(--font-heading);
+      font-weight:700;
+      font-size:1.05rem;
+      letter-spacing:1px;
+      box-shadow: 0 4px 14px rgba(225,16,0,0.06);
+      border:1px solid rgba(255,255,255,0.02);
+    }
+    .brand .title{
+      font-family:var(--font-heading);
+      font-size:1.05rem;
+      font-weight:700;
+      color:#fff;
+    }
+    .brand .subtitle{
+      font-size:0.8rem;
+      color:var(--muted);
+      margin-top:2px;
+    }
+
+    .nav{ display:flex; gap:8px; align-items:center; }
+    button.btn{
+      border:1px solid rgba(255,255,255,0.04);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+      color:#fff;
+      padding:8px 10px;
+      border-radius:6px;
+      cursor:pointer;
+      font-weight:700;
+      font-size:0.95rem;
+      letter-spacing:0.6px;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    button.btn:hover{
+      transform: translateY(-2px);
+      box-shadow: 0 8px 22px rgba(225,16,0,0.06);
+    }
+    .today-pill{
+      background: linear-gradient(90deg, rgba(225,16,0,0.12), rgba(255,77,77,0.04));
+      color:var(--accent-2);
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:0.9rem;
+      border:1px solid rgba(225,16,0,0.08);
+    }
+
+    .month-title{
+      font-size:1.1rem;
+      font-weight:700;
+      color:#fff;
+      letter-spacing:0.6px;
+    }
+
+    .weekday-row{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:6px;
+      color:var(--muted);
+      font-size:0.85rem;
+      text-align:center;
+      padding:6px 4px;
+      margin-bottom:6px;
+    }
+    .weekday-row > div{ text-transform: uppercase; font-weight:700; letter-spacing:1px; font-size:0.78rem; color:rgba(255,255,255,0.6) }
+
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:8px;
+    }
+    .cell{
+      min-height:var(--cell-size);
+      height:var(--cell-size);
+      background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(0,0,0,0.06));
+      border-radius:var(--radius);
+      padding:8px;
+      position:relative;
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+      align-items:flex-end;
+      cursor:default;
+      border:1px solid rgba(255,255,255,0.02);
+      transition: transform 140ms cubic-bezier(.2,.9,.3,1), box-shadow 140ms ease, background 120ms ease;
+      backdrop-filter: blur(2px);
+    }
+    .cell:hover{
+      transform: translateY(-6px);
+      box-shadow: 0 18px 40px rgba(0,0,0,0.6);
+      z-index:3;
+    }
+    .cell.muted{
+      opacity:0.45;
+      filter:grayscale(10%);
+    }
+    .cell .date{
+      font-weight:700;
+      font-size:0.95rem;
+      color:#fff;
+    }
+
+    .cell.today{
+      outline: 2px solid var(--today-outline);
+      box-shadow: inset 0 -6px 0 rgba(225,16,0,0.06), 0 14px 30px rgba(225,16,0,0.04);
+    }
+
+    .event-dot{
+      width:12px;height:12px;border-radius:2px;
+      position:absolute; left:8px; top:8px;
+      box-shadow:0 3px 10px rgba(0,0,0,0.6);
+      border:2px solid rgba(15,15,15,0.6);
+      transform: rotate(12deg);
+    }
+    .event-badge{
+      margin-top:auto;
+      width:100%;
+      text-align:left;
+      font-size:0.84rem;
+      padding-top:6px;
+    }
+    .event-badge a{
+      color:#fff;
+      text-decoration:none;
+      display:inline-block;
+      max-width:100%;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      font-weight:600;
+      font-size:0.9rem;
+    }
+
+    .muted-text{ color:var(--muted); font-size:0.9rem }
+    .events-list{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      margin-top:12px;
+    }
+    .event-item{
+      border-radius:8px;
+      padding:10px;
+      background: linear-gradient(90deg, rgba(255,255,255,0.015), rgba(0,0,0,0.06));
+      border:1px solid rgba(255,255,255,0.02);
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+    .event-color{
+      width:12px;height:12px;border-radius:3px;flex:0 0 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    }
+    .event-meta{ font-size:0.95rem; color:#fff }
+    .event-meta a{ color:var(--accent-2); text-decoration:none; font-weight:700 }
+
+    .footer-hint{ margin-top:10px; color:var(--muted); font-size:0.85rem }
+
+    @media (max-width:880px){
+      .wrap{ grid-template-columns:1fr; padding:8px }
+      .brand .subtitle{ display:none }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card calendar-with-car" id="calendar-card" aria-label="月份行事曆">
+      <div class="stripe" aria-hidden="true"></div>
+      <div class="card-inner">
+        <div class="calendar-header">
+          <div class="brand">
+            <div class="logo">F1</div>
+            <div>
+              <div class="title">F1 行事曆</div>
+              <div class="subtitle">賽程風 / 重要日期標記</div>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="month-title" id="monthTitle" aria-live="polite"></div>
+            <div class="nav">
+              <button class="btn" id="prevBtn" title="上個月">&lt;</button>
+              <button class="btn" id="todayBtn" title="返回今天">今天</button>
+              <button class="btn" id="nextBtn" title="下個月">&gt;</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="weekday-row" aria-hidden="true">
+          <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+        </div>
+
+        <div class="grid" id="calendarGrid" role="grid" aria-label="月份日期"></div>
+
+        <div class="footer-hint">點擊有連結的日期會另開分頁。滑鼠停留可閱讀事件標題。</div>
+      </div>
+    </div>
+
+    <aside class="card" id="events-card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <strong>當月重要日期</strong>
+        <span class="muted-text" id="eventsCount">0 項</span>
+      </div>
+      <div class="events-list" id="eventsList" aria-live="polite"></div>
+
+      <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
+        <div style="width:10px;height:10px;background:var(--accent);border-radius:2px"></div>
+        <div class="muted-text" style="font-size:0.9rem">紅色：主要事件</div>
+      </div>
+
+      <div class="muted-text" style="margin-top:12px;font-size:0.85rem">
+        在下面的 importantDates 物件中新增或修改事件。
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    // 範例：重要日期資料結構（key = yyyy-mm-dd）
+    const importantDates = {
+      "2025-12-25": { title: "耶誕節 - 公司放假", url: "https://example.com/christmas", color: "#e10600" },
+      "2025-12-31": { title: "跨年活動", url: "https://example.com/newyear", color: "#ff8a00" },
+      "2026-01-01": { title: "元旦", url: "https://example.com/newyear-day", color: "#10b981" },
+      // 新增格式示例：
+      // "2025-12-05": { title: "專案發佈", url: "https://your-site/launch", color: "#6366f1" }
+    };
+
+    const grid = document.getElementById('calendarGrid');
+    const monthTitle = document.getElementById('monthTitle');
+    const eventsList = document.getElementById('eventsList');
+    const eventsCount = document.getElementById('eventsCount');
+
+    let current = new Date();
+    const today = new Date();
+    function toISODate(d){
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function render(){
+      grid.innerHTML = '';
+      eventsList.innerHTML = '';
+
+      const year = current.getFullYear();
+      const month = current.getMonth();
+      monthTitle.textContent = `${year} 年 ${month+1} 月`;
+
+      const first = new Date(year, month, 1);
+      const startWeekday = first.getDay();
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+      const prevDays = new Date(year, month, 0).getDate();
+      const totalCells = 42;
+      const cells = [];
+
+      for(let i=0;i<startWeekday;i++){
+        const dayNum = prevDays - startWeekday + 1 + i;
+        const dateObj = new Date(year, month-1, dayNum);
+        cells.push({ date: dateObj, muted: true });
+      }
+      for(let d=1; d<=daysInMonth; d++){
+        const dateObj = new Date(year, month, d);
+        cells.push({ date: dateObj, muted: false });
+      }
+      while(cells.length < totalCells){
+        const nextIndex = cells.length - (startWeekday + daysInMonth) + 1;
+        const dateObj = new Date(year, month+1, nextIndex);
+        cells.push({ date: dateObj, muted: true });
+      }
+
+      for(const c of cells){
+        const iso = toISODate(c.date);
+        const isToday = iso === toISODate(today);
+        const hasEvent = importantDates.hasOwnProperty(iso);
+        const ev = importantDates[iso];
+
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (c.muted ? ' muted' : '') + (isToday ? ' today' : '');
+        cell.setAttribute('role','gridcell');
+        cell.setAttribute('aria-label', `${c.date.getFullYear()}年${c.date.getMonth()+1}月${c.date.getDate()}日` + (hasEvent? '，有事件':''));
+        cell.dataset.date = iso;
+
+        if(hasEvent){
+          const dot = document.createElement('span');
+          dot.className = 'event-dot';
+          dot.style.background = ev.color || 'var(--accent)';
+          dot.title = ev.title || '';
+          cell.appendChild(dot);
+        }
+
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'date';
+        dateDiv.textContent = c.date.getDate();
+        cell.appendChild(dateDiv);
+
+        if(hasEvent && !c.muted){
+          const badge = document.createElement('div');
+          badge.className = 'event-badge';
+          const a = document.createElement('a');
+          a.href = ev.url || '#';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.title = ev.title || ev.url || '';
+          a.textContent = ev.title || ev.url;
+          badge.appendChild(a);
+          cell.appendChild(badge);
+        }
+
+        cell.addEventListener('click', ()=>{
+          if(hasEvent && ev.url){
+            window.open(ev.url, '_blank', 'noopener');
+          }
+        });
+
+        grid.appendChild(cell);
+      }
+
+      const eventEntries = Object.entries(importantDates)
+        .map(([date, data])=> ({ date, data }))
+        .filter(item => {
+          const d = new Date(item.date + 'T00:00:00');
+          return d.getFullYear() === year && d.getMonth() === month;
+        })
+        .sort((a,b)=> a.date.localeCompare(b.date));
+
+      eventsCount.textContent = `${eventEntries.length} 項`;
+      if(eventEntries.length === 0){
+        const empty = document.createElement('div');
+        empty.className = 'muted-text';
+        empty.textContent = '本月沒有已設定的重要日期';
+        eventsList.appendChild(empty);
+      } else {
+        for(const e of eventEntries){
+          const row = document.createElement('div');
+          row.className = 'event-item';
+          const color = document.createElement('div');
+          color.className = 'event-color';
+          color.style.background = e.data.color || 'var(--accent)';
+          const meta = document.createElement('div');
+          meta.className = 'event-meta';
+          const dateLine = document.createElement('div');
+          dateLine.style.fontWeight = '700';
+          dateLine.textContent = e.date;
+          const titleLine = document.createElement('div');
+          const a = document.createElement('a');
+          a.href = e.data.url || '#';
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = e.data.title || (e.data.url || '');
+          titleLine.appendChild(a);
+          meta.appendChild(dateLine);
+          meta.appendChild(titleLine);
+          row.appendChild(color);
+          row.appendChild(meta);
+          eventsList.appendChild(row);
+        }
+      }
+    }
+
+    document.getElementById('prevBtn').addEventListener('click', ()=>{
+      current = new Date(current.getFullYear(), current.getMonth()-1, 1);
+      render();
+    });
+    document.getElementById('nextBtn').addEventListener('click', ()=>{
+      current = new Date(current.getFullYear(), current.getMonth()+1, 1);
+      render();
+    });
+    document.getElementById('todayBtn').addEventListener('click', ()=>{
+      current = new Date();
+      render();
+    });
+
+    current = new Date(today.getFullYear(), today.getMonth(), 1);
+    render();
+
+    // 可在 console 臨時修改事件
+    window.importantDates = importantDates;
+  </script>
+</body>
+</html>
